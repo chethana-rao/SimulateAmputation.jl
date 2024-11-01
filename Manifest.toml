@@ -1,6 +1,6 @@
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.11.0"
+julia_version = "1.11.1"
 manifest_format = "2.0"
 project_hash = "0b6949fa16c8aca0f9c1448a104eaa2479e69ffe"
 
@@ -207,7 +207,7 @@ version = "1.0.0"
 
 [[deps.Comodo]]
 deps = ["BSplineKit", "DataStructures", "DelaunayTriangulation", "Distances", "GLMakie", "GeometryBasics", "Interpolations", "LinearAlgebra", "OhMyREPL", "QuadGK", "Rotations", "StaticArrays", "Statistics", "TetGen", "XML"]
-git-tree-sha1 = "5a89bfa135c0717c3083d954bb8000e59932000d"
+git-tree-sha1 = "7e00241119d1d3f02c70890422a4ac13eef078ee"
 repo-rev = "main"
 repo-url = "https://github.com/COMODO-research/Comodo.jl"
 uuid = "59095408-2761-4f7a-bdc2-044e78630271"
@@ -521,7 +521,7 @@ version = "1.3.7"
 
 [[deps.Geogram]]
 deps = ["FileIO", "GeometryBasics", "Suppressor"]
-git-tree-sha1 = "e9753d31d3390b32fd7b5eab6443db4f5c83bde1"
+git-tree-sha1 = "94a23e2d729bb908c1f721259483e56f3f356204"
 repo-rev = "main"
 repo-url = "https://github.com/COMODO-research/Geogram.jl"
 uuid = "01f21b16-7867-403b-a62b-5acce171fc87"

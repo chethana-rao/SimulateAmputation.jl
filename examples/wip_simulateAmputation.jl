@@ -1,9 +1,11 @@
+# using simulatedamputation
 using Comodo
 using GLMakie
 using GeometryBasics
 using FileIO
 using Statistics
 using LinearAlgebra
+using Geogram
 
 # 
 Z_cut_offset_top = 200.0
@@ -12,6 +14,8 @@ Z_cut_level_tibia = Z_cut_level_skin+50
 Z_cut_level_fibula = Z_cut_level_skin+10
 
 Z_thickness_distal = 20 
+
+pointSpacing = 6.0 
 
 fileName_set = ("/home/kevin/DATA/Julia/BodyParts3D/assets/post/FMA7163_right_leg_isolated_remesh_25k.stl",
 "/home/kevin/DATA/Julia/BodyParts3D/assets/BodyParts3D_data/stl/FMA24474.stl",
@@ -47,7 +51,14 @@ for i in 1:1:length(fileName_set)
     F = tofaces(faces(M))
     V = topoints(coordinates(M))
     V = [Point{3,Float64}(v) for v in V]
-    F,V,_,_ = mergevertices(F,V)
+    
+    F,V,_,_ = mergevertices(F,V; pointSpacing=pointSpacing)
+
+    # Remesh evenly using desired point spacing
+
+    np = spacing2numvertices(F,V,pointSpacing)
+    F,V = ggremesh(F,V; nb_pts=np)
+
     push!(FF,F)
     push!(VV,V)
 end
