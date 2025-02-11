@@ -56,7 +56,10 @@ for i in 1:1:length(fileName_set)
 
     # Remesh evenly using desired point spacing
 
-    np = spacing2numvertices(F,V,pointSpacing)
+    # Determine number of points to request to closely match desired point spacing
+    np = spacing2numvertices(F,V,pointSpacing) 
+
+    # Remesh with desired number of points 
     F,V = ggremesh(F,V; nb_pts=np)
 
     push!(FF,F)
@@ -145,6 +148,24 @@ for i in eachindex(indCurve)
     NB_base[i] = cross(NE_indCurve[i],NV_indCurve[i])
 end
 
+numEdgeSmoothSteps = 25
+
+λ = 0.5
+for _ in 1:1:numEdgeSmoothSteps
+    for i in eachindex(indCurve)
+        i_prev = mod1(i-1,m)
+        i_next = mod1(i+1,m)
+        NB_base[i] = ((1.0-λ) .* NB_base[i]) .+  λ.*(NB_base[i_prev] .+ NB_base[i_next])./2.0
+        # NB_base[i] = 0.5.*NB_base[i] .+ 0.25.*NB_base[i_prev] .+ 0.25.*NB_base[i_next]
+        NB_base[i] = normalizevector(NB_base[i])
+    end
+end
+
+
+
+
+
+
 numPointBezier = 250
 v1 = 150 # Departure velocity of Hermite equivalent spline
 v2 = 75 # Arrival velocity of Hermite equivalent spline
@@ -161,7 +182,7 @@ for i in eachindex(indCurve)
     append!(Vb,vb)
 end
 
-Fb,Vb = loftpoints2surf(Vb,length(indCurve);close_loop=false,face_type=:quad)
+Fb = grid2surf(Vb,length(indCurve);periodicity=(false,true),face_type=:quad)
 
 
 ## Visualization
@@ -193,6 +214,6 @@ hp5 = dirplot(ax1,Vs[indCurve],NB_base.*mean(edgelengths(Fs,Vs))*3; color=:cyan,
 # end
 
 # hp1 = poly!(ax1,GeometryBasics.Mesh(Vb,Fb), color=:blue, shading = FastShading, transparency=false,strokecolor=:black,strokewidth=0.25)
-hp7 = mesh!(ax1,GeometryBasics.Mesh(Vb,Fb), color=:blue, shading = FastShading, transparency=false)
+hp7 = mesh!(ax1,GeometryBasics.Mesh(Vb,Fb), color=:white, shading = FastShading, transparency=false)
 
 fig
