@@ -1,4 +1,5 @@
 using Comodo
+using Comodo.DelaunayTriangulation
 using GLMakie
 using GeometryBasics
 using FileIO
@@ -83,8 +84,7 @@ for modelName in nameSetCut_top
     indexNow = findall(nameSet.==modelName)[1]
     Fn = FF[indexNow]
     Vn = VV[indexNow]
-    VF = simplexcenter(Fn,Vn)
-    B = [isless(vf[3],cut_plane_top) for vf in VF]
+   B = [all([Vn[i][3] < cut_plane_top for i in f]) for f in Fn]
     B_new = fixteeth(Fn,B,method=:add)       
     Fn1 = Fn[B_new]
     Fn1,Vn1,_ = remove_unused_vertices(Fn1,Vn)
@@ -98,9 +98,8 @@ for modelName in nameSetCut_bottom
     i = findall(nameSetCut_bottom .== modelName)[1]
     Fn = FF[indexNow] 
     Vn = VV[indexNow]  
-    VF = simplexcenter(Fn,Vn)
-    B = [vf[3] > cut_level[i] for vf in VF]
-    B_new = fixteeth(Fn,B,method=:add)       
+    B = [all([Vn[j][3] > cut_level[i] for j in f]) for f in Fn]
+    B_new = fixteeth(Fn,B,method=:remove)       
     Fn1 = Fn[B_new]
     Fn1,Vn1,_ = remove_unused_vertices(Fn1,Vn)
     FF[indexNow] = Fn1
@@ -123,48 +122,50 @@ Fs = FF[1]
 Vs = VV[1]
 # #find the boundary edges (top and bottom )
 Eb = boundaryedges(Fs)
+# indCurve_2 = edges2curve(Eb)
 # #extract the bottom edges: 
 # #the third coordinate is compared and lower than a certain threshold is removed  
 Eb_low = Vector{eltype(Eb)}()
+Eb_high = Vector{eltype(Eb)}()
 for e in Eb         
     if Vs[e[1]][3] < zlevel        
-      push!(Eb_low,e)  
+      push!(Eb_low,e)
+    else push!(Eb_high,e)  
     end
 end
 indCurve = edges2curve(Eb_low)
 indCurve = indCurve[1:end-1] 
-# smoothening the edges
 
-# #the mesh is smoothen the edges
-Vs = smoothmesh_laplacian(Eb,Vs, 50, 0.01)
-# # Vs = smoothmesh_laplacian(Eb_low,Vs, 25, 0.5)
+#top surface:
 
-# #finding mean of the trinagluar face, and extracting in the z direction 
- ZF = [mean(Vs[f])[3] for f in Fs]
-# # #logical operator 
- logicSmooth = ZF.<(minimum(ZF)+ Z_thickness_distal) #Can I use fixteeth? 
- constrained_points = elements2indices(boundaryedges(Fs[logicSmooth]))
- Vs = smoothmesh_hc(Fs[logicSmooth],Vs, 50, 0.1, 0.5; constrained_points=constrained_points)
- VV[1] = Vs
-#smoothen the rest of the mesh
+indCurve_1 = edges2curve(Eb_high)
+Vtop = Vs[indCurve_1[1:end-1]]
 
-# for modelName in nameSetCut_smooth
-#     indexNow = findall(nameSet.==modelName)[1]
-#     Fs = FF[indexNow] 
-#     Vs = VV[indexNow]  
-#     Eb = boundaryedges(Fs)
-#     ZF = [mean(Vs[f])[3] for f in Fs]
-#     # logicSmooth = ZF.<(minimum(ZF)+ 2*pointSpacing) #Can I use fixteeth? 
-#     constrained_points = elements2indices(boundaryedges(Fs))
-#     Vs = smoothmesh_hc(Fs,Vs, 50, 0.1, 0.5; constrained_points=constrained_points)
-#     # Vs = smoothmesh_laplacian(Eb,Vs, 100, 0.01)
-#     VV[indexNow] = Vs
-# end  
+meanZ = mean([v[3] for v in Vtop])
+Z = [v[3] for v in Vtop]
+maxZ = maximum(Z)
+maxid_z =findall(z->z==maxZ,Z)
+minZ = minimum(Z)
+minid_z =findall(z->z==minZ,Z)
+limit = maxZ- ((maxZ - minZ)/pointSpacing)
+# indRemove = findall(z->z > meanZ+1e-3,Z)
+B = [all([Vs[i][3] <= meanZ+.1 for i in f]) for f in Fs]
+B_new = fixteeth(Fs,B,method=:add)       
+Fs1 = Fs[B_new]
+Fs1,Vs1,_ = remove_unused_vertices(Fs1,Vs)
+    
 
 
-
-
+ids = findall(z->z> limit && z < maxZ,Z)
+Vtop_shift = [Point{3,Float64}(v[1], v[2], meanZ) for v in Vtop]
 #Visualization
+Vs[indCurve_1[1:end-1]] .= Vtop_shift
+# cons_seg = deepcopy(indCurve_1)
+# cons_seg = reverse!(cons_seg)
+# TRn = triangulate(Vtop; boundary_nodes=cons_seg, delete_ghosts=true)
+# # Fs1 = [TriangleFace{Int}(tr) for tr in each_solid_triangle(TRn)] 
+# Vtop1 = get_points(TRn)
+        
 
 fig1 = Figure(size=(1200,800))
 ax1 = LScene(fig1[1,1])
@@ -172,4 +173,13 @@ for i in 1:1:length(fileName_set)
     hp1 = poly!(ax1,GeometryBasics.Mesh(VV[i],FF[i]), color=:white, shading = FastShading, transparency=false,strokecolor=:black,strokewidth=1)
     
 end
+hp2 = wireframe!(ax1,GeometryBasics.Mesh(Vs,Eb_high), linewidth=5,color=:red)
+# hp3 = scatter!(ax1,Vtop[maxid_z], markersize=20,color=:blue)
+# hp4 = scatter!(ax1,Vtop[minid_z], markersize=20,color=:green)
+# hp5 = scatter!(ax1,Vtop[indRemove], markersize=20,color=:yellow)
+ax2 = LScene(fig1[1,2])
+hp1 = poly!(ax2,GeometryBasics.Mesh(Vs1,Fs1), color=:white, shading = FastShading, transparency=false,strokecolor=:black,strokewidth=1)
+hp2 = wireframe!(ax2,GeometryBasics.Mesh(Vs,Eb_high), linewidth=5,color=:red)
+
+hp6 = scatter!(ax2,Vtop, markersize=20,color=:black)
 fig1
