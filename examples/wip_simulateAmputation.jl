@@ -1,10 +1,10 @@
 # using simulatedamputation
 using Comodo
-using GLMakie
-using GeometryBasics
+using Comodo.GLMakie
+using Comodo.GeometryBasics
+using Comodo.Statistics
+using Comodo.LinearAlgebra
 using FileIO
-using Statistics
-using LinearAlgebra
 using Geogram
 
 # 
@@ -15,7 +15,7 @@ Z_cut_level_fibula = Z_cut_level_skin+10
 
 Z_thickness_distal = 20 
 
-pointSpacing = 6.0 
+pointSpacing = 4.0 
 
 fileName_set = ("/home/kevin/DATA/Julia/BodyParts3D/assets/post/FMA7163_right_leg_isolated_remesh_25k.stl",
 "/home/kevin/DATA/Julia/BodyParts3D/assets/BodyParts3D_data/stl/FMA24474.stl",
@@ -184,6 +184,17 @@ end
 
 Fb = grid2surf(Vb,length(indCurve);periodicity=(false,true),face_type=:quad)
 
+Fbq = quad2tri(Fb,Vb)
+
+F_skin,V_skin,C_skin = joingeom(FF[1],VV[1],Fbq,Vb)
+
+F_skin,V_skin,_ = mergevertices(F_skin,V_skin)
+
+# Determine number of points to request to closely match desired point spacing
+np = spacing2numvertices(F_skin,V_skin,pointSpacing) 
+
+# Remesh with desired number of points 
+F_skin,V_skin = ggremesh(F_skin,V_skin; nb_pts=np)
 
 ## Visualization
 
@@ -191,7 +202,7 @@ fig = Figure(size=(1200,800))
 
 # ax1 = Axis3(fig[1, 1], aspect = :data, xlabel = "X", ylabel = "Y", zlabel = "Z", title = "Imported mesh")
 ax1 = LScene(fig[1,1])
-for i in 1:1:length(fileName_set)
+for i in 2:1:length(fileName_set)
     hp1 = poly!(ax1,GeometryBasics.Mesh(VV[i],FF[i]), color=:white, shading = FastShading, transparency=false,strokecolor=:black,strokewidth=1)
 end
 
@@ -205,7 +216,7 @@ end
 
 # hp3 = dirplot(ax1,Vs[indCurve],NV_indCurve.*mean(edgelengths(Fs,Vs)); color=:red,linewidth=3,scaleval=1.0,style=:from)
 # hp4 = dirplot(ax1,Vs[indCurve],NE_indCurve.*mean(edgelengths(Fs,Vs)); color=:green,linewidth=3,scaleval=1.0,style=:from)
-hp5 = dirplot(ax1,Vs[indCurve],NB_base.*mean(edgelengths(Fs,Vs))*3; color=:cyan,linewidth=3,scaleval=1.0,style=:from)
+# hp5 = dirplot(ax1,Vs[indCurve],NB_base.*mean(edgelengths(Fs,Vs))*3; color=:cyan,linewidth=3,scaleval=1.0,style=:from)
 
 # hp6 = lines!(ax1,V_tibia[indCurve_tibia],color=:yellow,linewidth=6)
 
@@ -214,6 +225,10 @@ hp5 = dirplot(ax1,Vs[indCurve],NB_base.*mean(edgelengths(Fs,Vs))*3; color=:cyan,
 # end
 
 # hp1 = poly!(ax1,GeometryBasics.Mesh(Vb,Fb), color=:blue, shading = FastShading, transparency=false,strokecolor=:black,strokewidth=0.25)
-hp7 = mesh!(ax1,GeometryBasics.Mesh(Vb,Fb), color=:white, shading = FastShading, transparency=false)
+# hp7 = mesh!(ax1,GeometryBasics.Mesh(Vb,Fb), color=:white, shading = FastShading, transparency=true)
+# hp7 = mesh!(ax1,GeometryBasics.Mesh(V_skin,F_skin), color=:white, shading = FastShading, transparency=true)
+hp7 = poly!(ax1,GeometryBasics.Mesh(V_skin,F_skin), color=:white, shading = FastShading, transparency=false,strokecolor=:black,strokewidth=0.25)
 
 fig
+
+# save("/home/kevin/Desktop/leg.stl",GeometryBasics.Mesh(V_skin,F_skin))
